@@ -121,7 +121,6 @@ export async function chat({ sessionId, message, technicianId }) {
   const replyMessage = buildReply(extraction, suggestedSlots);
   await repo.saveMessage({ sessionId, technicianId, role: 'assistant', message: replyMessage });
 
-  // matchedServiceId тarvitaan frontendissä POST /api/bookings/confirm -pyynnössä
   return { sessionId, role: 'assistant', message: replyMessage, extraction, suggestedSlots, matchedServiceId };
 }
 

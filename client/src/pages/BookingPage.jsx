@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
 
-// Подключаем к конкретному мастеру. Можно переопределить через VITE_TECHNICIAN_ID.
 const TECHNICIAN_ID = import.meta.env.VITE_TECHNICIAN_ID
   ? Number(import.meta.env.VITE_TECHNICIAN_ID)
   : 1;
@@ -35,8 +34,8 @@ export default function BookingPage() {
   const [sessionId, setSessionId] = useState(null);
   const [formName, setFormName] = useState('');
   const [formPhone, setFormPhone] = useState('');
-  const [formError, setFormError] = useState(false);   // пустые поля
-  const [apiError, setApiError] = useState(null);      // ошибка от сервера
+  const [formError, setFormError] = useState(false);
+  const [apiError, setApiError] = useState(null);
   const [booked, setBooked] = useState(false);
   const scrollEl = useRef(null);
 

@@ -1,29 +1,29 @@
 # BookMyNails 💅
 
-AI-ассистент для бронирования времени у самозанятого мастера маникюра в Финляндии. Клиентка пишет на финском что угодно — «ensi tiistai iltapäivällä geelilakkaus» — Groq извлекает дату, время и услугу, находит свободный слот в PostgreSQL и атомарно фиксирует бронь.
+AI-powered appointment booking assistant for self-employed nail technicians in Finland. A customer types anything in Finnish — *«ensi tiistai iltapäivällä geelilakkaus»* — Groq extracts the date, time, and service, finds a free slot in PostgreSQL, and atomically confirms the booking.
 
 ![Hero](docs/screenshot-hero.png)
 
 ![Chat](docs/screenshot-chat.png)
 
-## Как это работает
+## How it works
 
 ```
-клиентка пишет → POST /api/ai/chat
-               → Groq (JSON mode, Finnish system prompt)
-               → Zod валидация extraction
-               → поиск слота (ANY($dates::date[]), фильтр по времени и длительности)
-               → suggestedSlots → фронтенд показывает карточки
-               → клиентка нажимает Varaa → форма имя + телефон
-               → POST /api/bookings/confirm
-               → SELECT FOR UPDATE → INSERT booking → UPDATE slot → COMMIT
-               → подтверждение в чате
-               → (roadmap) Twilio SMS клиентке и мастеру
+customer types → POST /api/ai/chat
+              → Groq (JSON mode, Finnish system prompt)
+              → Zod validation of extraction
+              → slot search (ANY($dates::date[]), time + duration filter)
+              → suggestedSlots → frontend renders slot cards
+              → customer clicks Varaa → name + phone form
+              → POST /api/bookings/confirm
+              → SELECT FOR UPDATE → INSERT booking → UPDATE slot → COMMIT
+              → confirmation message in chat
+              → (roadmap) Twilio SMS to customer and technician
 ```
 
-## Интересные технические решения
+## Notable engineering decisions
 
-**EXCLUDE constraint против пересечения слотов**
+**EXCLUDE constraint prevents overlapping slots**
 ```sql
 ALTER TABLE availability_slots
   ADD CONSTRAINT no_overlap EXCLUDE USING gist (
@@ -31,41 +31,41 @@ ALTER TABLE availability_slots
     tstzrange(start_at, end_at) WITH &&
   );
 ```
-PostgreSQL не даст вставить два слота одного мастера с пересекающимися временными диапазонами на уровне БД — не на уровне приложения.
+PostgreSQL rejects overlapping time ranges for the same technician at the database level — not at the application level.
 
-**SELECT FOR UPDATE против гонки бронирований**
+**SELECT FOR UPDATE prevents double-booking race conditions**
 ```sql
 SELECT id, technician_id FROM availability_slots
 WHERE id = $1 AND is_booked = false
 FOR UPDATE;
 ```
-При двух одновременных запросах на один слот второй транзакция ждёт завершения первой. Если слот уже помечен как `is_booked = true` — второй получает 409 Conflict, не тихую ошибку.
+When two requests hit the same slot simultaneously, the second transaction waits for the first to finish. If the slot is already `is_booked = true`, the second request receives a 409 Conflict — not a silent failure.
 
-**Failure-aware retry стратегия**
+**Failure-aware retry strategy**
 ```
-429 → мгновенный fallback на llama-3.1-8b-instant (ждать смысла нет — квота исчерпана)
-503 → exponential backoff: 4 с → 8 с → 16 с (модель перегружена, подождём)
-401/403 → fail-fast break (конфигурационная ошибка, ретраи не помогут)
+429 → instant fallback to llama-3.1-8b-instant (waiting is pointless — quota exhausted)
+503 → exponential backoff: 4 s → 8 s → 16 s (model overloaded, retry makes sense)
+401/403 → fail-fast break (config error, retries won't help)
 ```
 
-**Парсинг финского естественного языка**
+**Finnish natural language date parsing**
 
-Groq извлекает `date` как свободный текст («huomenna», «ensi maanantai», «24.6.»). `availability.service.js` переводит это в ISO-даты с учётом часового пояса Хельсинки (UTC+3) — `Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Helsinki' })` вместо `toISOString()`, которая даёт UTC и ошибается после 22:00.
+Groq returns `date` as free text («huomenna», «ensi maanantai», «24.6.»). `availability.service.js` converts it to ISO dates using Helsinki timezone — `Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Helsinki' })` instead of `toISOString()`, which uses UTC and gives the wrong day after 22:00.
 
-## Стек
+## Stack
 
-| Слой | Технологии |
-|------|-----------|
+| Layer | Technologies |
+|-------|-------------|
 | Frontend | React 19, Vite, React Router |
 | Backend | Node.js, Express 5, ESM |
 | AI | Groq API (`llama-3.3-70b-versatile`), groq-sdk, Zod v4 |
-| База данных | PostgreSQL (Supabase), pgx GIST extension |
-| Архитектура | routes → controllers → services → repositories |
+| Database | PostgreSQL (Supabase), pgx GIST extension |
+| Architecture | routes → controllers → services → repositories |
 
-## Запуск локально
+## Running locally
 
 ```bash
-# 1. Клонируем
+# 1. Clone
 git clone https://github.com/Rellance/bookmynails.git
 cd bookmynails
 
@@ -73,31 +73,31 @@ cd bookmynails
 cd server
 npm install
 cp .env.example .env
-# Заполни DATABASE_URL и GROQ_API_KEY в .env
+# Fill in DATABASE_URL and GROQ_API_KEY in .env
 
-# Применяем миграцию (один раз)
+# Run migration (once)
 psql $DATABASE_URL -f src/db/migrations/001_init.sql
 
 node server.js           # http://localhost:3001
 
-# 3. Frontend (отдельный терминал)
+# 3. Frontend (separate terminal)
 cd ../client
 npm install
 npm run dev              # http://localhost:5173
-                         # Vite проксирует /api → :3001
+                         # Vite proxies /api → :3001
 ```
 
-Получить бесплатный Groq API ключ: [console.groq.com](https://console.groq.com).
+Get a free Groq API key at [console.groq.com](https://console.groq.com).
 
 ## Roadmap
 
-- [ ] Twilio SMS-напоминания клиентке за 24 ч и за 2 ч до записи
-- [ ] TechnicianDashboard — мастер видит свои брони, управляет слотами и услугами
-- [ ] Деплой на Azure App Service (backend) + Azure Static Web Apps (frontend)
-- [ ] Azure Functions для cron-отправки SMS-напоминаний
-- [ ] Дублирование на нескольких мастеров (multi-tenant по `technician_id`)
-- [ ] Дата-range фильтр и экспорт брони в CSV
+- [ ] Twilio SMS reminders 24 h and 2 h before the appointment
+- [ ] TechnicianDashboard — manage bookings, slots, and services
+- [ ] Deploy to Azure App Service (backend) + Azure Static Web Apps (frontend)
+- [ ] Azure Functions cron job for SMS reminders
+- [ ] Multi-tenant support (multiple technicians via `technician_id`)
+- [ ] Date-range filter and CSV export for bookings
 
-## Лицензия
+## License
 
 MIT

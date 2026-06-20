@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-// Схема того, что Gemini извлекает из сообщения клиентки на финском языке.
-// Используется как responseSchema для Gemini structured output И для Zod-валидации ответа.
+// What Groq extracts from a Finnish customer message.
+// Used for Zod post-validation of the JSON mode response.
 export const chatExtractionSchema = z.object({
   date: z
     .string()
