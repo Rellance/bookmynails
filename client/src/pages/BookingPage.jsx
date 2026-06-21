@@ -1,21 +1,35 @@
 import { useState, useRef, useCallback } from 'react';
+import { API_BASE_URL } from '../config.js';
 
 const TECHNICIAN_ID = import.meta.env.VITE_TECHNICIAN_ID
   ? Number(import.meta.env.VITE_TECHNICIAN_ID)
   : 1;
 
-const FI_DAYS = ['Su', 'Ma', 'Ti', 'Ke', 'To', 'Pe', 'La'];
+const HELSINKI_TZ = 'Europe/Helsinki';
 
 function formatSlot(slot, serviceType) {
   const start = new Date(slot.start_at);
   const mins = slot.duration_minutes
     ?? Math.round((new Date(slot.end_at) - start) / 60000);
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // Lasketaan päivä/päivämäärä/kellonaika aina Helsinki-aikavyöhykkeellä,
+  // ei selaimen paikallisella zonella — muuten ulkomailta varaava asiakas
+  // näkisi väärän ajan oikealle slotille. start_at on UTC tietokannassa.
+  const parts = new Intl.DateTimeFormat('fi-FI', {
+    timeZone: HELSINKI_TZ,
+    weekday: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  }).formatToParts(start);
+  const get = type => parts.find(p => p.type === type)?.value ?? '';
+  const dayRaw = get('weekday').replace('.', ''); // "ma" / "ti" ...
+  const day = dayRaw.charAt(0).toUpperCase() + dayRaw.slice(1);
+
   return {
     id: slot.id,
-    day: FI_DAYS[start.getDay()],
-    date: String(start.getDate()),
-    time: start.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' }),
+    day,
+    date: get('day'),
+    time: `${get('hour')}.${get('minute')}`,
     service: serviceType ? `${cap(serviceType)} · ${mins} min` : `Kynsihoito · ${mins} min`,
   };
 }
@@ -58,7 +72,7 @@ export default function BookingPage() {
     scrollDown();
 
     try {
-      const res = await fetch('/api/ai/chat', {
+      const res = await fetch(`${API_BASE_URL}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, technicianId: TECHNICIAN_ID, sessionId }),
@@ -101,7 +115,7 @@ export default function BookingPage() {
 
     setApiError(null);
     try {
-      const res = await fetch('/api/bookings/confirm', {
+      const res = await fetch(`${API_BASE_URL}/api/bookings/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

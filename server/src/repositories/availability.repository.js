@@ -6,7 +6,8 @@ export async function findFree({ technicianId, date }) {
     `SELECT * FROM availability_slots
      WHERE technician_id = $1
        AND is_booked = false
-       AND ($2::date IS NULL OR start_at::date = $2::date)
+       AND ($2::date IS NULL
+            OR (start_at AT TIME ZONE 'Europe/Helsinki')::date = $2::date)
      ORDER BY start_at`,
     [technicianId, date ?? null]
   );
@@ -25,8 +26,9 @@ export async function findSuggested({ technicianId, dates, afterTime, minDuratio
      FROM availability_slots
      WHERE technician_id     = $1
        AND is_booked         = false
-       AND start_at::date    = ANY($2::date[])
-       AND ($3::time IS NULL OR start_at::time >= $3::time)
+       AND (start_at AT TIME ZONE 'Europe/Helsinki')::date = ANY($2::date[])
+       AND ($3::time IS NULL
+            OR (start_at AT TIME ZONE 'Europe/Helsinki')::time >= $3::time)
        AND ($4::int  IS NULL
             OR EXTRACT(EPOCH FROM (end_at - start_at)) / 60 >= $4)
      ORDER BY start_at

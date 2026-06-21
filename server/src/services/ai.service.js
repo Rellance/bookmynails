@@ -141,10 +141,15 @@ function buildReply(extraction, suggestedSlots) {
   const options = suggestedSlots
     .map((slot) => {
       const start = new Date(slot.start_at);
+      // Aina Helsinki-aikavyöhyke (start_at on UTC). Ilman timeZone-arvoa
+      // teksti käyttäisi palvelimen zonea (Azure = UTC) ja näyttäisi eri ajan
+      // kuin frontendin slot-kortti.
       const date = start.toLocaleDateString('fi-FI', {
+        timeZone: 'Europe/Helsinki',
         weekday: 'long', day: 'numeric', month: 'numeric',
       });
       const time = start.toLocaleTimeString('fi-FI', {
+        timeZone: 'Europe/Helsinki',
         hour: '2-digit', minute: '2-digit',
       });
       return `• ${date} klo ${time}`;

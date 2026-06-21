@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\Illia\\\\receipt-assistant\\\\server\" -Exclude \"node_modules\" | Where-Object { !$_.FullName.Contains\\(\"node_modules\"\\) } | Select-Object FullName)"
+    ]
+  }
+}
