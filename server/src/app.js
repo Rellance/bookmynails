@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { errorHandler } from './middleware/errorHandler.js';
 import { techniciansRouter } from './routes/technicians.routes.js';
 import { servicesRouter } from './routes/services.routes.js';
@@ -9,6 +10,7 @@ import { aiRouter } from './routes/ai.routes.js';
 export function createApp() {
   const app = express();
 
+  app.use(cors());
   app.use(express.json());
 
   app.use('/api/technicians', techniciansRouter);
