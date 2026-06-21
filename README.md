@@ -1,5 +1,7 @@
 # BookMyNails 💅
 
+🔗 **Live demo:** https://brave-island-0a272a203.7.azurestaticapps.net/
+
 AI-powered appointment booking assistant for self-employed nail technicians in Finland. A customer types anything in Finnish — *«ensi tiistai iltapäivällä geelilakkaus»* — Groq extracts the date, time, and service, finds a free slot in PostgreSQL, and atomically confirms the booking.
 
 ![Hero](docs/screenshot-hero.png)
@@ -52,6 +54,13 @@ When two requests hit the same slot simultaneously, the second transaction waits
 
 Groq returns `date` as free text («huomenna», «ensi maanantai», «24.6.»). `availability.service.js` converts it to ISO dates using Helsinki timezone — `Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Helsinki' })` instead of `toISOString()`, which uses UTC and gives the wrong day after 22:00.
 
+**Consistent Europe/Helsinki timezone across the whole flow**
+
+Timestamps are stored as UTC (`TIMESTAMPTZ`) and converted to Helsinki time *explicitly* at every display and filtering boundary — never relying on the ambient timezone of the server, browser, or database session:
+
+- **Display** — both the backend chat text (`buildReply`) and the frontend slot cards (`formatSlot`) format times with `timeZone: 'Europe/Helsinki'`. A slot stored as `15:00 UTC` shows as `klo 18.00` whether the customer's browser is in Finland or abroad, and the chat text always matches the slot card.
+- **SQL filtering** — date/time matching uses `(start_at AT TIME ZONE 'Europe/Helsinki')::date` / `::time` so an "evening" request (`≥ 17:00` Helsinki) is compared in wall-clock Helsinki time, not in the Postgres session's UTC.
+
 ## Stack
 
 | Layer | Technologies |
@@ -59,7 +68,7 @@ Groq returns `date` as free text («huomenna», «ensi maanantai», «24.6.»). 
 | Frontend | React 19, Vite, React Router |
 | Backend | Node.js, Express 5, ESM |
 | AI | Groq API (`llama-3.3-70b-versatile`), groq-sdk, Zod v4 |
-| Database | PostgreSQL (Supabase), pgx GIST extension |
+| Database | PostgreSQL (Supabase), `btree_gist` extension |
 | Architecture | routes → controllers → services → repositories |
 
 ## Running locally
@@ -89,14 +98,27 @@ npm run dev              # http://localhost:5173
 
 Get a free Groq API key at [console.groq.com](https://console.groq.com).
 
+## Deployment
+
+The app runs entirely on Azure:
+
+| Component | Service | Notes |
+|-----------|---------|-------|
+| Backend (Express API) | Azure App Service | `bookmynails-api.azurewebsites.net`, deployed with `az webapp up` |
+| Frontend (Vite SPA) | Azure Static Web Apps | [live demo](https://brave-island-0a272a203.7.azurestaticapps.net/), deployed with `swa deploy` |
+| Database | PostgreSQL (Supabase) | `TIMESTAMPTZ` columns, GIST exclusion constraint |
+
+The frontend reads the backend URL from `VITE_API_URL` (baked into the bundle at build time via `client/.env.production`); secrets (`DATABASE_URL`, `GROQ_API_KEY`) live only in App Service configuration and are never committed.
+
 ## Roadmap
 
 - [ ] Twilio SMS reminders 24 h and 2 h before the appointment
 - [ ] TechnicianDashboard — manage bookings, slots, and services
-- [ ] Deploy to Azure App Service (backend) + Azure Static Web Apps (frontend)
 - [ ] Azure Functions cron job for SMS reminders
 - [ ] Multi-tenant support (multiple technicians via `technician_id`)
 - [ ] Date-range filter and CSV export for bookings
+
+✅ **Done:** deployed to Azure App Service (backend) + Azure Static Web Apps (frontend); explicit Europe/Helsinki timezone handling end-to-end.
 
 ## License
 
