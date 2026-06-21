@@ -1,6 +1,7 @@
-// HTTP-kutsut AI-assistentille.
+import { API_BASE_URL } from '../config.js';
+
 export async function sendChatMessage({ sessionId, message, technicianId }) {
-  const res = await fetch('/api/ai/chat', {
+  const res = await fetch(`${API_BASE_URL}/api/ai/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionId, message, technicianId }),
@@ -13,7 +14,7 @@ export async function sendChatMessage({ sessionId, message, technicianId }) {
 }
 
 export async function fetchChatHistory(sessionId) {
-  const res = await fetch(`/api/ai/history/${sessionId}`);
+  const res = await fetch(`${API_BASE_URL}/api/ai/history/${sessionId}`);
   if (!res.ok) throw new Error('Historian haku epäonnistui');
   return res.json();
 }

@@ -1,6 +1,7 @@
-// HTTP-kutsut varauksille.
+import { API_BASE_URL } from '../config.js';
+
 export async function createBooking(data) {
-  const res = await fetch('/api/bookings', {
+  const res = await fetch(`${API_BASE_URL}/api/bookings`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -14,7 +15,7 @@ export async function createBooking(data) {
 
 export async function fetchBookings(technicianId) {
   const params = technicianId ? `?technicianId=${technicianId}` : '';
-  const res = await fetch(`/api/bookings${params}`);
+  const res = await fetch(`${API_BASE_URL}/api/bookings${params}`);
   if (!res.ok) throw new Error('Virhe varausten haussa');
   return res.json();
 }

@@ -6,11 +6,11 @@ server/node_modules/
 # Environment variables — never commit real secrets
 .env
 .env.local
-.env.production
 server/.env
 server/.env.local
 client/.env
 client/.env.local
+# .env.production is intentionally tracked — contains only the public Azure API URL
 
 # Build output
 dist/
