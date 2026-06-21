@@ -48,7 +48,7 @@ function nextWeekdayDate(targetDay) {
 
 // Muuntaa extraction.date → taulukko ISO-päivämääriä.
 // Repository odottaa taulukkoa, koska "ei päivää" → haetaan 7 kandidaattia kerralla.
-function parseDates(dateStr) {
+export function parseDates(dateStr) {
   // Ei päivää mainittu → haetaan seuraavat 7 päivää kandidaateiksi
   if (!dateStr) {
     const today = todayInHelsinki();
@@ -88,7 +88,7 @@ function parseDates(dateStr) {
 //
 // Palautetaan 'HH:MM'-merkkijono tai null.
 // SQL-kysely käyttää: start_at::time >= $afterTime
-function parseAfterTime(timePref) {
+export function parseAfterTime(timePref) {
   if (!timePref) return null;
 
   const lower = timePref.toLowerCase();

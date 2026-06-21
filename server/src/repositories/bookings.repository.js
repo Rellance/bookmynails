@@ -4,12 +4,14 @@ import { pool } from '../db/pool.js';
 export async function findAll(technicianId) {
   const { rows } = await pool.query(
     `SELECT b.*, s.name_fi AS service_name, s.price_eur,
-            t.name AS technician_name
+            t.name AS technician_name,
+            sl.start_at, sl.end_at
      FROM bookings b
      JOIN services s ON s.id = b.service_id
      JOIN technicians t ON t.id = b.technician_id
+     JOIN availability_slots sl ON sl.id = b.slot_id
      WHERE ($1::int IS NULL OR b.technician_id = $1)
-     ORDER BY b.created_at DESC`,
+     ORDER BY sl.start_at ASC`,
     [technicianId ?? null]
   );
   return rows;
@@ -18,10 +20,12 @@ export async function findAll(technicianId) {
 export async function findById(id) {
   const { rows } = await pool.query(
     `SELECT b.*, s.name_fi AS service_name, s.price_eur,
-            t.name AS technician_name
+            t.name AS technician_name,
+            sl.start_at, sl.end_at
      FROM bookings b
      JOIN services s ON s.id = b.service_id
      JOIN technicians t ON t.id = b.technician_id
+     JOIN availability_slots sl ON sl.id = b.slot_id
      WHERE b.id = $1`,
     [id]
   );
